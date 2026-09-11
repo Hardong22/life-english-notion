@@ -1,0 +1,4 @@
+interface:
+  display_name: "生活英语陪练"
+  short_description: "日常生活聊天与按需角色扮演，温和纠错并将真实学习记录整理到 Notion"
+  default_prompt: "使用 $life-english-notion 陪我聊聊今天的生活；等我说完再纠错，需要时再进入角色扮演。"
