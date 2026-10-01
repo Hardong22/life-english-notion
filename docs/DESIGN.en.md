@@ -22,6 +22,7 @@ Notion stores the records. Before saving, the Skill confirms the destination, as
 | `docs/` | Chinese and English maintenance notes and practice scenarios |
 | `scripts/check_project.py` | Release manifest, links, and common privacy checks |
 | `tests/` | Checker tests using synthetic data |
+| `.github/workflows/check.yml` | Runs the same checks in GitHub Actions on every push |
 
 ## Before publishing
 
@@ -33,9 +34,9 @@ python3 -m unittest discover -s tests -v
 python3 scripts/check_project.py --history
 ```
 
-The checker uses an explicit release manifest and looks for tracked Git files outside it. It checks common privacy patterns in file contents. `--history` also checks commit identities and historical files reachable from local branches and tags. The default check reads new, uncommitted manifest files from the working directory as well.
+The checker uses an explicit release manifest and looks for tracked Git files outside it. It checks common privacy patterns in file contents and the `SKILL.md` metadata. `--history` also checks commit identities and historical files reachable from local branches and tags. The default check reads new, uncommitted manifest files from the working directory as well. GitHub Actions runs the same three commands on every push.
 
-Use a GitHub `noreply` address for commits. Keep `preferences.local.md`, `private-records/`, transcripts, and credentials out of the release manifest. `.gitignore` does not protect files that Git already tracks. If sensitive information is found, check earlier commits as well as current files.
+Use a GitHub `noreply` address for commits. The checker also accepts other `noreply@…` bot addresses, such as GitHub web merges or AI tool co-author trailers. Keep `preferences.local.md`, `private-records/`, transcripts, and credentials out of the release manifest. `.gitignore` does not protect files that Git already tracks. If sensitive information is found, check earlier commits as well as current files.
 
 Automated detection covers only some risks. Read the actual diff before publishing. A clean history check does not prove that remote caches, other references, or copies held by others have been removed.
 

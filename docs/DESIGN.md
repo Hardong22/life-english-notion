@@ -22,6 +22,7 @@ Notion 负责存放记录。保存前确认目标、使用稳定会话标识并�
 | `docs/` | 中英文维护说明和试用场景 |
 | `scripts/check_project.py` | 发布清单、链接和常见隐私信息检查 |
 | `tests/` | 使用合成数据的检查器测试 |
+| `.github/workflows/check.yml` | 每次推送时在 GitHub Actions 中运行同样的检查 |
 
 ## 发布检查
 
@@ -33,9 +34,9 @@ python3 -m unittest discover -s tests -v
 python3 scripts/check_project.py --history
 ```
 
-检查器核对明确的发布清单，并检查 Git 中是否还有清单外的跟踪文件。它检查文件中的常见隐私模式；`--history` 还检查本地分支和标签可达的提交身份及历史文件。首次整理尚未提交的新文件时，默认检查仍会读取工作目录中的这些文件。
+检查器核对明确的发布清单，并检查 Git 中是否还有清单外的跟踪文件。它检查文件中的常见隐私模式和 `SKILL.md` 的元数据；`--history` 还检查本地分支和标签可达的提交身份及历史文件。首次整理尚未提交的新文件时，默认检查仍会读取工作目录中的这些文件。这三条命令也会通过 GitHub Actions 在每次推送时运行。
 
-提交使用 GitHub 的 `noreply` 隐私邮箱。`preferences.local.md`、`private-records/`、转写和密钥不能加入发布清单。`.gitignore` 对已经被 Git 跟踪的文件不起作用；发现敏感信息时，需要检查旧提交，不能只删当前文件。
+提交使用 GitHub 的 `noreply` 隐私邮箱；检查器同样接受 `noreply@…` 形式的机器人地址，例如 GitHub 网页合并或 AI 工具的署名。`preferences.local.md`、`private-records/`、转写和密钥不能加入发布清单。`.gitignore` 对已经被 Git 跟踪的文件不起作用；发现敏感信息时，需要检查旧提交，不能只删当前文件。
 
 自动检测只能提示一部分风险，发布前仍需阅读实际差异。历史检查也不能证明远端缓存、其他引用或别人保存的副本已经删除。
 

@@ -1,0 +1,22 @@
+name: Check project
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python3 scripts/check_project.py
+      - run: python3 -m unittest discover -s tests -v
+      - run: python3 scripts/check_project.py --history

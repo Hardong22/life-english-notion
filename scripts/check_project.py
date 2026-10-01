@@ -6,12 +6,16 @@ import subprocess
 import sys
 
 FILES = (
-    '.gitignore', 'LICENSE', 'README.md', 'README.en.md', 'SKILL.md',
-    'agents/openai.yaml', 'preferences.example.md', 'references/conversation.md',
-    'references/review.md', 'references/notion.md', 'docs/DESIGN.md',
-    'docs/DESIGN.en.md', 'docs/BEHAVIOR.md', 'docs/BEHAVIOR.en.md',
+    '.github/workflows/check.yml', '.gitignore', 'LICENSE', 'README.md', 'README.en.md',
+    'SKILL.md', 'agents/openai.yaml', 'preferences.example.md',
+    'references/conversation.md', 'references/review.md', 'references/notion.md',
+    'docs/DESIGN.md', 'docs/DESIGN.en.md', 'docs/BEHAVIOR.md', 'docs/BEHAVIOR.en.md',
     'scripts/check_project.py', 'tests/test_check_project.py',
 )
+SKILL_NAME = 'life-english-notion'
+# Front matter fields defined by the Agent Skills format and their length limits.
+FRONT_MATTER_KEYS = ('name', 'description', 'license', 'compatibility', 'metadata', 'allowed-tools')
+FRONT_MATTER_LIMITS = {'description': 1024, 'compatibility': 500}
 
 
 def private_content(content):
@@ -31,7 +35,37 @@ def private_content(content):
 
 
 def safe_email(email):
-    return bool(re.fullmatch(r'[\w.+-]+@users\.noreply\.github\.com', email))
+    """GitHub privacy addresses and no-reply bot addresses carry no personal data."""
+    return bool(re.fullmatch(r'[\w.+-]+@users\.noreply\.github\.com|no-?reply@[\w.-]+',
+                             email, re.IGNORECASE))
+
+
+def check_skill(content):
+    """Validate SKILL.md front matter: required name/description, known fields, limits."""
+    match = re.match(r'\A---\n(.*?)\n---\n', content, re.DOTALL)
+    if not match:
+        return ['SKILL.md: missing front matter metadata']
+    errors = []
+    fields = {}
+    for line in match.group(1).splitlines():
+        if not line.strip() or line[0] in ' \t#':
+            continue  # nested values of metadata and comments
+        key, sep, value = line.partition(':')
+        if not sep or key not in FRONT_MATTER_KEYS:
+            errors.append(f'SKILL.md: unexpected front matter line {line!r}')
+            continue
+        value = value.strip()
+        if len(value) > 1 and value[0] == value[-1] and value[0] in '"\'':
+            value = value[1:-1]
+        fields[key] = value
+    if fields.get('name') != SKILL_NAME:
+        errors.append(f'SKILL.md: name must be {SKILL_NAME}')
+    if not fields.get('description'):
+        errors.append('SKILL.md: description is required')
+    for key, limit in FRONT_MATTER_LIMITS.items():
+        if len(fields.get(key, '')) > limit:
+            errors.append(f'SKILL.md: {key} exceeds {limit} characters')
+    return errors
 
 
 def git(root, *args):
@@ -86,9 +120,7 @@ def check(root, history=False):
                     errors.append(f'{name}: invalid local link {target}')
     skill = root / 'SKILL.md'
     if skill.is_file() and not skill.is_symlink():
-        content = skill.read_text(encoding='utf-8')
-        if not re.match(r'\A---\nname: life-english-notion\ndescription: [^\n]+\n---\n', content):
-            errors.append('SKILL.md: invalid entry metadata')
+        errors.extend(check_skill(skill.read_text(encoding='utf-8')))
     if (root / '.git').exists():
         tracked = git(root, 'ls-files', '-z').decode().split('\0')
         if any(name and name not in FILES for name in tracked):

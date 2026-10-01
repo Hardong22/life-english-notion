@@ -25,6 +25,12 @@ class PackageChecks(unittest.TestCase):
         with (self.root / 'README.md').open('a', encoding='utf-8') as stream:
             stream.write(text)
 
+    def edit_skill(self, old, new):
+        path = self.root / 'SKILL.md'
+        content = path.read_text(encoding='utf-8')
+        self.assertIn(old, content)
+        path.write_text(content.replace(old, new, 1), encoding='utf-8')
+
     def test_valid_package(self):
         self.assertEqual(check(self.root), [])
 
@@ -48,6 +54,22 @@ class PackageChecks(unittest.TestCase):
         (self.root / 'SKILL.md').write_text('not a skill', encoding='utf-8')
         self.assertTrue(any('metadata' in error for error in check(self.root)))
 
+    def test_optional_front_matter_fields(self):
+        self.edit_skill('\ndescription:', '\nlicense: MIT\nmetadata:\n  version: "1"\ndescription:')
+        self.assertEqual(check(self.root), [])
+
+    def test_wrong_skill_name(self):
+        self.edit_skill('name: life-english-notion', 'name: other-skill')
+        self.assertTrue(any('name must be' in error for error in check(self.root)))
+
+    def test_unknown_front_matter_field(self):
+        self.edit_skill('\ndescription:', '\nauthor: someone\ndescription:')
+        self.assertTrue(any('unexpected front matter' in error for error in check(self.root)))
+
+    def test_description_too_long(self):
+        self.edit_skill('\ndescription: ', '\ndescription: ' + 'x' * 1025)
+        self.assertTrue(any('exceeds' in error for error in check(self.root)))
+
     def test_symlink(self):
         (self.root / 'LICENSE').unlink()
         (self.root / 'LICENSE').symlink_to(self.root / 'README.md')
@@ -65,9 +87,9 @@ class PackageChecks(unittest.TestCase):
     def run_git(self, *args):
         return subprocess.run(['git', '-C', str(self.root), *args], check=True, capture_output=True)
 
-    def commit(self, email):
+    def commit(self, email, message='Synthetic fixture'):
         self.run_git('-c', 'user.name=Example', '-c', 'user.email=' + email,
-                     '-c', 'commit.gpgsign=false', 'commit', '-m', 'Synthetic fixture')
+                     '-c', 'commit.gpgsign=false', 'commit', '-m', message)
 
     def test_tracked_private_file(self):
         self.run_git('init', '-b', 'main')
@@ -85,6 +107,13 @@ class PackageChecks(unittest.TestCase):
         self.run_git('init', '-b', 'main')
         self.run_git('add', 'README.md')
         self.commit('123+example' + '@users.noreply.github.com')
+        self.assertEqual(check(self.root, history=True), [])
+
+    def test_noreply_bot_identity(self):
+        self.run_git('init', '-b', 'main')
+        self.run_git('add', 'README.md')
+        self.commit('noreply@github.com',
+                    'Synthetic fixture\n\nCo-Authored-By: Bot <no-reply@example.com>')
         self.assertEqual(check(self.root, history=True), [])
 
     def test_private_data_in_deleted_file(self):
