@@ -6,6 +6,20 @@ Talk about your day in Codex and practise putting it into English. When you want
 
 This is an installable Skill that you can use in new chats. You do not need to run a separate website. Text practice works in chat; voice requires support from your client. Saving records requires a Notion connection and a destination page.
 
+## Screenshots
+
+These screenshots show the English Practice Room (英语练习室) web pages: vocabulary cards, story review, video practice, learning records, and writing practice. The interface is in Chinese. Life English Notion itself runs in Codex chat and does not need this website.
+
+**Vocabulary · Word card**
+
+![Vocabulary page: a card for "predecessor" with phonetics, an example sentence, Chinese meanings, and usage](docs/images/vocabulary-card.webp)
+
+| Vocabulary · Story review | Video practice · Library |
+|:---:|:---:|
+| ![Story review page: a set of eight words waiting to become a story](docs/images/story-review.webp) | ![Video library page: resume the last video or import from YouTube, Bilibili, or a local file](docs/images/video-library.webp) |
+| **Video practice · Learning record** | **Writing practice** |
+| ![Learning record page: watch time, videos, saved expressions, recordings, and minutes watched over the last 7 days](docs/images/video-records.webp) | ![Writing practice page: a first draft for a scene, with three questions to consider before writing](docs/images/writing-practice.webp) |
+
 ## Install and start
 
 Send this in Codex:

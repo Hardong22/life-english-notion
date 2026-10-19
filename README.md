@@ -6,6 +6,20 @@
 
 这是一个可安装、可在新会话中调用的 Skill。你不需要另外运行网页。文字聊天可以直接用；语音需要客户端支持，保存到 Notion 则需要连接 Notion 并指定位置。
 
+## 界面预览
+
+下面是「英语练习室」网页的截图，包括背单词、短文复习、视频练习、学习记录和写作练习。生活英语陪练本身在 Codex 聊天里运行，不需要这个网页。
+
+**背单词 · 学习词卡**
+
+![背单词页：predecessor 的词卡，包含音标、例句、中文释义和用法](docs/images/vocabulary-card.webp)
+
+| 背单词 · 短文复习 | 视频练习 · 视频库 |
+|:---:|:---:|
+| ![短文复习页：一组 8 个词，等待生成故事](docs/images/story-review.webp) | ![视频库页：接着上次的进度听，或导入 YouTube、Bilibili 和本地影片](docs/images/video-library.webp) |
+| **视频练习 · 学习记录** | **写作练习** |
+| ![学习记录页：累计观看、个人影片、收藏表达、录音对照和最近 7 天的观看时长](docs/images/video-records.webp) | ![写作练习页：按场景写初稿，右侧是落笔前的三个问题](docs/images/writing-practice.webp) |
+
 ## 安装与开始
 
 在 Codex 中发送：

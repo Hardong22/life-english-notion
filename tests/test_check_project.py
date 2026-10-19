@@ -9,6 +9,15 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from check_project import FILES, check
 
+IMAGE = next(name for name in FILES if name.endswith('.webp'))
+
+
+def webp(*chunks):
+    """Build a minimal RIFF/WebP container from (chunk id, payload) pairs."""
+    body = b'WEBP' + b''.join(kind + len(data).to_bytes(4, 'little') + data + bytes(len(data) & 1)
+                              for kind, data in chunks)
+    return b'RIFF' + len(body).to_bytes(4, 'little') + body
+
 
 class PackageChecks(unittest.TestCase):
     def setUp(self):
@@ -62,12 +71,25 @@ class PackageChecks(unittest.TestCase):
         (self.root / 'scripts/check_project.py').write_text('token = ' + 'github_' + 'pat_' + 'x' * 40)
         self.assertTrue(any('private data' in error for error in check(self.root)))
 
+    def test_clean_image(self):
+        (self.root / IMAGE).write_bytes(webp((b'VP8X', bytes(10)), (b'ICCP', bytes(3)), (b'VP8 ', bytes(9))))
+        self.assertEqual(check(self.root), [])
+
+    def test_image_metadata(self):
+        # The odd-sized chunk before EXIF checks that padding keeps the parser aligned.
+        (self.root / IMAGE).write_bytes(webp((b'ICCP', bytes(3)), (b'EXIF', b'Exif\0\0synthetic')))
+        self.assertTrue(any('metadata' in error for error in check(self.root)))
+
+    def test_image_not_webp(self):
+        (self.root / IMAGE).write_text('not an image')
+        self.assertTrue(any('not a WebP' in error for error in check(self.root)))
+
     def run_git(self, *args):
         return subprocess.run(['git', '-C', str(self.root), *args], check=True, capture_output=True)
 
-    def commit(self, email):
+    def commit(self, email, message='Synthetic fixture'):
         self.run_git('-c', 'user.name=Example', '-c', 'user.email=' + email,
-                     '-c', 'commit.gpgsign=false', 'commit', '-m', 'Synthetic fixture')
+                     '-c', 'commit.gpgsign=false', 'commit', '-m', message)
 
     def test_tracked_private_file(self):
         self.run_git('init', '-b', 'main')
@@ -87,6 +109,13 @@ class PackageChecks(unittest.TestCase):
         self.commit('123+example' + '@users.noreply.github.com')
         self.assertEqual(check(self.root, history=True), [])
 
+    def test_noreply_bot_identity(self):
+        self.run_git('init', '-b', 'main')
+        self.run_git('add', 'README.md')
+        self.commit('noreply@github.com',
+                    'Synthetic fixture\n\nCo-Authored-By: Bot <no-reply@example.com>')
+        self.assertEqual(check(self.root, history=True), [])
+
     def test_private_data_in_deleted_file(self):
         self.run_git('init', '-b', 'main')
         (self.root / 'README.md').write_text('person' + '@' + 'example.com')
@@ -96,6 +125,17 @@ class PackageChecks(unittest.TestCase):
         self.run_git('add', 'README.md')
         self.commit('123+example' + '@users.noreply.github.com')
         self.assertTrue(any('historical file' in error for error in check(self.root, history=True)))
+
+    def test_image_metadata_in_history(self):
+        self.run_git('init', '-b', 'main')
+        (self.root / IMAGE).write_bytes(webp((b'XMP ', b'<x:xmpmeta/>')))
+        self.run_git('add', IMAGE)
+        self.commit('123+example' + '@users.noreply.github.com')
+        (self.root / IMAGE).write_bytes(webp((b'VP8 ', bytes(9))))
+        self.run_git('add', IMAGE)
+        self.commit('123+example' + '@users.noreply.github.com')
+        self.assertEqual(check(self.root), [])
+        self.assertTrue(any('metadata' in error for error in check(self.root, history=True)))
 
 
 if __name__ == '__main__':

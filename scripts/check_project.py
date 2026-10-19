@@ -11,7 +11,23 @@ FILES = (
     'references/review.md', 'references/notion.md', 'docs/DESIGN.md',
     'docs/DESIGN.en.md', 'docs/BEHAVIOR.md', 'docs/BEHAVIOR.en.md',
     'scripts/check_project.py', 'tests/test_check_project.py',
+    'docs/images/vocabulary-card.webp', 'docs/images/story-review.webp',
+    'docs/images/video-library.webp', 'docs/images/video-records.webp',
+    'docs/images/writing-practice.webp',
 )
+
+
+def image_problem(data):
+    """Screenshots must be WebP without EXIF or XMP chunks, which can carry personal data."""
+    if data[:4] != b'RIFF' or data[8:12] != b'WEBP':
+        return 'not a WebP image'
+    pos = 12
+    while pos + 8 <= len(data):
+        if data[pos:pos + 4] in (b'EXIF', b'XMP '):
+            return 'image metadata (EXIF/XMP)'
+        size = int.from_bytes(data[pos + 4:pos + 8], 'little')
+        pos += 8 + size + (size & 1)
+    return None
 
 
 def private_content(content):
@@ -31,7 +47,9 @@ def private_content(content):
 
 
 def safe_email(email):
-    return bool(re.fullmatch(r'[\w.+-]+@users\.noreply\.github\.com', email))
+    """GitHub privacy addresses and no-reply bot addresses carry no personal data."""
+    return bool(re.fullmatch(r'[\w.+-]+@users\.noreply\.github\.com|no-?reply@[\w.-]+',
+                             email, re.IGNORECASE))
 
 
 def git(root, *args):
@@ -60,8 +78,11 @@ def check_history(root):
                 errors.append(f'{commit[:8]}: historical file outside release policy')
             if kind == b'blob' and sha not in seen:
                 seen.add(sha)
-                content = git(root, 'cat-file', 'blob', sha.decode()).decode('utf-8', errors='replace')
-                if private_content(content):
+                blob = git(root, 'cat-file', 'blob', sha.decode())
+                if path.endswith('.webp'):
+                    if problem := image_problem(blob):
+                        errors.append(f'{commit[:8]}: {problem} in historical file')
+                elif private_content(blob.decode('utf-8', errors='replace')):
                     errors.append(f'{commit[:8]}: possible private data in historical file')
     return errors
 
@@ -73,6 +94,10 @@ def check(root, history=False):
         path = root / name
         if not path.resolve().is_relative_to(root) or path.is_symlink() or not path.is_file():
             errors.append(f'{name}: missing file or symlink')
+            continue
+        if name.endswith('.webp'):
+            if problem := image_problem(path.read_bytes()):
+                errors.append(f'{name}: {problem}')
             continue
         content = path.read_text(encoding='utf-8')
         if private_content(content):
